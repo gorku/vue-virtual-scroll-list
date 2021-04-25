@@ -104,10 +104,17 @@ const VirtualList = Vue.component('virtual-list', {
     // return current scroll offset
     getOffset () {
       if (this.pageMode) {
-        return document.documentElement[this.directionKey] || document.body[this.directionKey]
+        return (
+          document.documentElement[this.directionKey] ||
+          document.body[this.directionKey]
+        )
       } else {
         const { root } = this.$refs
-        return root ? Math.ceil(root[this.directionKey]) : 0
+        return root
+          ? this.customScroll
+            ? this.customScroll
+            : Math.ceil(root[this.directionKey])
+          : 0
       }
     },
 
@@ -182,7 +189,9 @@ const VirtualList = Vue.component('virtual-list', {
       if (root) {
         const rect = root.getBoundingClientRect()
         const { defaultView } = root.ownerDocument
-        const offsetFront = this.isHorizontal ? (rect.left + defaultView.pageXOffset) : (rect.top + defaultView.pageYOffset)
+        const offsetFront = this.isHorizontal
+          ? rect.left + defaultView.pageXOffset
+          : rect.top + defaultView.pageYOffset
         this.virtual.updateParam('slotHeaderSize', offsetFront)
       }
     },
@@ -197,14 +206,17 @@ const VirtualList = Vue.component('virtual-list', {
     // ----------- public method end -----------
 
     installVirtual () {
-      this.virtual = new Virtual({
-        slotHeaderSize: 0,
-        slotFooterSize: 0,
-        keeps: this.keeps,
-        estimateSize: this.estimateSize,
-        buffer: Math.round(this.keeps / 3), // recommend for a third of keeps
-        uniqueIds: this.getUniqueIdFromDataSources()
-      }, this.onRangeChanged)
+      this.virtual = new Virtual(
+        {
+          slotHeaderSize: 0,
+          slotFooterSize: 0,
+          keeps: this.keeps,
+          estimateSize: this.estimateSize,
+          buffer: Math.round(this.keeps / 3), // recommend for a third of keeps
+          uniqueIds: this.getUniqueIdFromDataSources()
+        },
+        this.onRangeChanged
+      )
 
       // sync initial range
       this.range = this.virtual.getRange()
@@ -212,7 +224,11 @@ const VirtualList = Vue.component('virtual-list', {
 
     getUniqueIdFromDataSources () {
       const { dataKey } = this
-      return this.dataSources.map((dataSource) => typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey])
+      return this.dataSources.map(dataSource =>
+        typeof dataKey === 'function'
+          ? dataKey(dataSource)
+          : dataSource[dataKey]
+      )
     },
 
     // event called when each item mounted or size changed
@@ -245,7 +261,7 @@ const VirtualList = Vue.component('virtual-list', {
       const scrollSize = this.getScrollSize()
 
       // iOS scroll-spring-back behavior will make direction mistake
-      if (offset < 0 || (offset + clientSize > scrollSize + 1) || !scrollSize) {
+      if (offset < 0 || offset + clientSize > scrollSize + 1 || !scrollSize) {
         return
       }
 
@@ -257,9 +273,16 @@ const VirtualList = Vue.component('virtual-list', {
     emitEvent (offset, clientSize, scrollSize, evt) {
       this.$emit('scroll', evt, this.virtual.getRange())
 
-      if (this.virtual.isFront() && !!this.dataSources.length && (offset - this.topThreshold <= 0)) {
+      if (
+        this.virtual.isFront() &&
+        !!this.dataSources.length &&
+        offset - this.topThreshold <= 0
+      ) {
         this.$emit('totop')
-      } else if (this.virtual.isBehind() && (offset + clientSize + this.bottomThreshold >= scrollSize)) {
+      } else if (
+        this.virtual.isBehind() &&
+        offset + clientSize + this.bottomThreshold >= scrollSize
+      ) {
         this.$emit('tobottom')
       }
     },
@@ -270,29 +293,48 @@ const VirtualList = Vue.component('virtual-list', {
     getRenderSlots (h) {
       const slots = []
       const { start, end } = this.range
-      const { dataSources, dataKey, itemClass, itemTag, itemStyle, isHorizontal, extraProps, dataComponent, itemScopedSlots } = this
+      const {
+        dataSources,
+        dataKey,
+        itemClass,
+        itemTag,
+        itemStyle,
+        isHorizontal,
+        extraProps,
+        dataComponent,
+        itemScopedSlots
+      } = this
       for (let index = start; index <= end; index++) {
         const dataSource = dataSources[index]
         if (dataSource) {
-          const uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey]
+          const uniqueKey =
+            typeof dataKey === 'function'
+              ? dataKey(dataSource)
+              : dataSource[dataKey]
           if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
-            slots.push(h(Item, {
-              props: {
-                index,
-                tag: itemTag,
-                event: EVENT_TYPE.ITEM,
-                horizontal: isHorizontal,
-                uniqueKey: uniqueKey,
-                source: dataSource,
-                extraProps: extraProps,
-                component: dataComponent,
-                scopedSlots: itemScopedSlots
-              },
-              style: itemStyle,
-              class: `${itemClass}${this.itemClassAdd ? ' ' + this.itemClassAdd(index) : ''}`
-            }))
+            slots.push(
+              h(Item, {
+                props: {
+                  index,
+                  tag: itemTag,
+                  event: EVENT_TYPE.ITEM,
+                  horizontal: isHorizontal,
+                  uniqueKey: uniqueKey,
+                  source: dataSource,
+                  extraProps: extraProps,
+                  component: dataComponent,
+                  scopedSlots: itemScopedSlots
+                },
+                style: itemStyle,
+                class: `${itemClass}${
+                  this.itemClassAdd ? ' ' + this.itemClassAdd(index) : ''
+                }`
+              })
+            )
           } else {
-            console.warn(`Cannot get the data-key '${dataKey}' from data-sources.`)
+            console.warn(
+              `Cannot get the data-key '${dataKey}' from data-sources.`
+            )
           }
         } else {
           console.warn(`Cannot get the index '${index}' from data-sources.`)
@@ -307,56 +349,95 @@ const VirtualList = Vue.component('virtual-list', {
   render (h) {
     const { header, footer } = this.$slots
     const { padFront, padBehind } = this.range
-    const { isHorizontal, pageMode, rootTag, wrapTag, wrapClass, wrapStyle, headerTag, headerClass, headerStyle, footerTag, footerClass, footerStyle } = this
-    const paddingStyle = { padding: isHorizontal ? `0px ${padBehind}px 0px ${padFront}px` : `${padFront}px 0px ${padBehind}px` }
-    const wrapperStyle = wrapStyle ? Object.assign({}, wrapStyle, paddingStyle) : paddingStyle
+    const {
+      isHorizontal,
+      pageMode,
+      rootTag,
+      wrapTag,
+      wrapClass,
+      wrapStyle,
+      headerTag,
+      headerClass,
+      headerStyle,
+      footerTag,
+      footerClass,
+      footerStyle
+    } = this
+    const paddingStyle = {
+      padding: isHorizontal
+        ? `0px ${padBehind}px 0px ${padFront}px`
+        : `${padFront}px 0px ${padBehind}px`
+    }
+    const wrapperStyle = wrapStyle
+      ? Object.assign({}, wrapStyle, paddingStyle)
+      : paddingStyle
 
-    return h(rootTag, {
-      ref: 'root',
-      on: {
-        '&scroll': !pageMode && this.onScroll
-      }
-    }, [
-      // header slot
-      header ? h(Slot, {
-        class: headerClass,
-        style: headerStyle,
-        props: {
-          tag: headerTag,
-          event: EVENT_TYPE.SLOT,
-          uniqueKey: SLOT_TYPE.HEADER
+    return h(
+      rootTag,
+      {
+        ref: 'root',
+        on: {
+          '&scroll': !pageMode && this.onScroll
         }
-      }, header) : null,
+      },
+      [
+        // header slot
+        header
+          ? h(
+            Slot,
+            {
+              class: headerClass,
+              style: headerStyle,
+              props: {
+                tag: headerTag,
+                event: EVENT_TYPE.SLOT,
+                uniqueKey: SLOT_TYPE.HEADER
+              }
+            },
+            header
+          )
+          : null,
 
-      // main list
-      h(wrapTag, {
-        class: wrapClass,
-        attrs: {
-          role: 'group'
-        },
-        style: wrapperStyle
-      }, this.getRenderSlots(h)),
+        // main list
+        h(
+          wrapTag,
+          {
+            class: wrapClass,
+            attrs: {
+              role: 'group'
+            },
+            style: wrapperStyle
+          },
+          this.getRenderSlots(h)
+        ),
 
-      // footer slot
-      footer ? h(Slot, {
-        class: footerClass,
-        style: footerStyle,
-        props: {
-          tag: footerTag,
-          event: EVENT_TYPE.SLOT,
-          uniqueKey: SLOT_TYPE.FOOTER
-        }
-      }, footer) : null,
+        // footer slot
+        footer
+          ? h(
+            Slot,
+            {
+              class: footerClass,
+              style: footerStyle,
+              props: {
+                tag: footerTag,
+                event: EVENT_TYPE.SLOT,
+                uniqueKey: SLOT_TYPE.FOOTER
+              }
+            },
+            footer
+          )
+          : null,
 
-      // an empty element use to scroll to bottom
-      h('div', {
-        ref: 'shepherd',
-        style: {
-          width: isHorizontal ? '0px' : '100%',
-          height: isHorizontal ? '100%' : '0px'
-        }
-      })
-    ])
+        // an empty element use to scroll to bottom
+        h('div', {
+          ref: 'shepherd',
+          style: {
+            width: isHorizontal ? '0px' : '100%',
+            height: isHorizontal ? '100%' : '0px'
+          }
+        })
+      ]
+    )
   }
 })
 

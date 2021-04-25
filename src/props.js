@@ -15,7 +15,9 @@ export const VirtualProps = {
     type: [Object, Function],
     required: true
   },
-
+  customScroll: {
+    type: [Number]
+  },
   keeps: {
     type: Number,
     default: 30

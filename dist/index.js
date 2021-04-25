@@ -34,6 +34,55 @@
     return Constructor;
   }
 
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
+  }
+
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   function _toConsumableArray(arr) {
     return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
   }
@@ -426,6 +475,9 @@
       type: [Object, Function],
       required: true
     },
+    customScroll: {
+      type: [Number]
+    },
     keeps: {
       type: Number,
       "default": 30
@@ -561,10 +613,6 @@
     }
   };
 
-  /**
-   * item and slot component both use similar wrapper
-   * we need to know their size change at any time
-   */
   var Wrapper = {
     created: function created() {
       this.shapeKey = this.horizontal ? 'offsetWidth' : 'offsetHeight';
@@ -609,18 +657,23 @@
           _this$extraProps = this.extraProps,
           extraProps = _this$extraProps === void 0 ? {} : _this$extraProps,
           index = this.index,
+          source = this.source,
           _this$scopedSlots = this.scopedSlots,
           scopedSlots = _this$scopedSlots === void 0 ? {} : _this$scopedSlots,
           uniqueKey = this.uniqueKey;
-      extraProps.source = this.source;
-      extraProps.index = index;
+
+      var props = _objectSpread2({}, extraProps, {
+        source: source,
+        index: index
+      });
+
       return h(tag, {
         key: uniqueKey,
         attrs: {
           role: 'listitem'
         }
       }, [h(component, {
-        props: extraProps,
+        props: props,
         scopedSlots: scopedSlots
       })]);
     }
@@ -649,9 +702,9 @@
     SLOT: 'slot_resize'
   };
   var SLOT_TYPE = {
-    HEADER: 'header',
+    HEADER: 'thead',
     // string value also use for aria role attribute
-    FOOTER: 'footer'
+    FOOTER: 'tfoot'
   };
   var VirtualList = Vue.component('virtual-list', {
     props: VirtualProps,
@@ -729,7 +782,7 @@
           return document.documentElement[this.directionKey] || document.body[this.directionKey];
         } else {
           var root = this.$refs.root;
-          return root ? Math.ceil(root[this.directionKey]) : 0;
+          return root ? this.customScroll ? this.customScroll : Math.ceil(root[this.directionKey]) : 0;
         }
       },
       // return client viewport size
