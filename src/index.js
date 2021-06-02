@@ -293,48 +293,31 @@ const VirtualList = Vue.component('virtual-list', {
     getRenderSlots (h) {
       const slots = []
       const { start, end } = this.range
-      const {
-        dataSources,
-        dataKey,
-        itemClass,
-        itemTag,
-        itemStyle,
-        isHorizontal,
-        extraProps,
-        dataComponent,
-        itemScopedSlots
-      } = this
+      const { dataSources, dataKey, itemClass, itemTag, itemStyle, isHorizontal, extraProps, dataComponent, itemScopedSlots } = this
+      const slotComponent = this.$scopedSlots && this.$scopedSlots.item
       for (let index = start; index <= end; index++) {
         const dataSource = dataSources[index]
         if (dataSource) {
-          const uniqueKey =
-            typeof dataKey === 'function'
-              ? dataKey(dataSource)
-              : dataSource[dataKey]
+          const uniqueKey = typeof dataKey === 'function' ? dataKey(dataSource) : dataSource[dataKey]
           if (typeof uniqueKey === 'string' || typeof uniqueKey === 'number') {
-            slots.push(
-              h(Item, {
-                props: {
-                  index,
-                  tag: itemTag,
-                  event: EVENT_TYPE.ITEM,
-                  horizontal: isHorizontal,
-                  uniqueKey: uniqueKey,
-                  source: dataSource,
-                  extraProps: extraProps,
-                  component: dataComponent,
-                  scopedSlots: itemScopedSlots
-                },
-                style: itemStyle,
-                class: `${itemClass}${
-                  this.itemClassAdd ? ' ' + this.itemClassAdd(index) : ''
-                }`
-              })
-            )
+            slots.push(h(Item, {
+              props: {
+                index,
+                tag: itemTag,
+                event: EVENT_TYPE.ITEM,
+                horizontal: isHorizontal,
+                uniqueKey: uniqueKey,
+                source: dataSource,
+                extraProps: extraProps,
+                component: dataComponent,
+                slotComponent: slotComponent,
+                scopedSlots: itemScopedSlots
+              },
+              style: itemStyle,
+              class: `${itemClass}${this.itemClassAdd ? ' ' + this.itemClassAdd(index) : ''}`
+            }))
           } else {
-            console.warn(
-              `Cannot get the data-key '${dataKey}' from data-sources.`
-            )
+            console.warn(`Cannot get the data-key '${dataKey}' from data-sources.`)
           }
         } else {
           console.warn(`Cannot get the index '${index}' from data-sources.`)

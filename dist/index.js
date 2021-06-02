@@ -1,5 +1,5 @@
 /*!
- * vue-virtual-scroll-list v2.3.2
+ * vue-virtual-scroll-list v2.3.5
  * open source under the MIT license
  * https://github.com/tangbc/vue-virtual-scroll-list#readme
  */
@@ -473,7 +473,7 @@
     },
     dataComponent: {
       type: [Object, Function],
-      required: true
+      required: false
     },
     customScroll: {
       type: [Number]
@@ -588,6 +588,9 @@
     component: {
       type: [Object, Function]
     },
+    slotComponent: {
+      type: Function
+    },
     uniqueKey: {
       type: [String, Number]
     },
@@ -660,7 +663,8 @@
           source = this.source,
           _this$scopedSlots = this.scopedSlots,
           scopedSlots = _this$scopedSlots === void 0 ? {} : _this$scopedSlots,
-          uniqueKey = this.uniqueKey;
+          uniqueKey = this.uniqueKey,
+          slotComponent = this.slotComponent;
 
       var props = _objectSpread2({}, extraProps, {
         source: source,
@@ -672,7 +676,11 @@
         attrs: {
           role: 'listitem'
         }
-      }, [h(component, {
+      }, [slotComponent ? h('div', slotComponent({
+        item: source,
+        index: index,
+        scope: props
+      })) : h(component, {
         props: props,
         scopedSlots: scopedSlots
       })]);
@@ -947,6 +955,7 @@
             extraProps = this.extraProps,
             dataComponent = this.dataComponent,
             itemScopedSlots = this.itemScopedSlots;
+        var slotComponent = this.$scopedSlots && this.$scopedSlots.item;
 
         for (var index = start; index <= end; index++) {
           var dataSource = dataSources[index];
@@ -965,6 +974,7 @@
                   source: dataSource,
                   extraProps: extraProps,
                   component: dataComponent,
+                  slotComponent: slotComponent,
                   scopedSlots: itemScopedSlots
                 },
                 style: itemStyle,
